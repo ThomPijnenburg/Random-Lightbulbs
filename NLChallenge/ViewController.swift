@@ -122,19 +122,22 @@ class ViewController: UIViewController, UITextFieldDelegate {
         }
         
         // Start doing a number of sample routines defined by users input
-        for _ in 0..<reps {
+        for i in 1..<reps+1 {
             
             // take new sample from lightbulb reservoir, which returns the number of colors
             let newSample = sampleAndCalculateUniqueColors()
             
+            
+//            print(i)
             // calculate new average
             total += Float(newSample)
-            newAverage = Float(total) / Float(reps)
+            newAverage = Float(total) / Float(i)
             
             // reassign variables
             oldAverage = newAverage
-            maxReps += 1
-            print(maxReps)
+            maxReps = i
+            
+//            print(newAverage)
         }
         
         // set expected number of colors to calculated average

@@ -22,9 +22,12 @@ class ViewController: UIViewController, UITextFieldDelegate {
     var bulbSamples: [Lightbulb]?
     var estimatedNumberColors: Float?
     var iterations: Int?
+    var expectedValue: Double?
     
 //  view with user input
     var inputWindow = InputView()
+    
+    var activityIndicator = UIActivityIndicatorView()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -36,12 +39,21 @@ class ViewController: UIViewController, UITextFieldDelegate {
         // call the populate function to construct the 70 lightbulbs
         bulbReservoir = Lightbulb.populate()
         
+        // call expected value method to retrieve the expected value of unique colors
+        expectedValue = Lightbulb.expectedValue()
+        
         // set textfield delegate to self to control user input
         inputWindow.textField.delegate = self
         inputWindow.textField.keyboardType = .numberPad
+    
+        let activityIndicator = UIActivityIndicatorView(frame: CGRect(x: 0, y: 0, width: 20, height: 20))
+        let barButton = UIBarButtonItem(customView: activityIndicator)
+        self.navigationItem.setRightBarButton(barButton, animated: true)
+//        activityIndicator.startAnimating()
         
         // call function to set up views
         setupViews()
+        
         
         // dismiss keyboard when tapping screen
         let tapRecognizer = UITapGestureRecognizer()
@@ -69,7 +81,11 @@ class ViewController: UIViewController, UITextFieldDelegate {
     // set iteration variable to user input
     func textFieldDidEndEditing(_ textField: UITextField) {
         iterations = Int(textField.text!)
+        // Reset result values
+        inputWindow.resultView.colorLabel.text = String(0)
+        inputWindow.resultView.simulationLabel.text = String(0)
     }
+    
     
     // dismiss keyboard when tapping view
     func didTapView(){
@@ -78,13 +94,25 @@ class ViewController: UIViewController, UITextFieldDelegate {
     
     // set up subviews
     func setupViews() {
-
+        
+        // style the activity indicator
+        activityIndicator.backgroundColor = UIColor(red: 48/255, green: 52/255, blue: 63/255, alpha: 0.8)
+        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+        activityIndicator.center = view.center
+        activityIndicator.hidesWhenStopped = true
+        activityIndicator.color = green
+        
         view.addSubview(inputWindow)
+        view.addSubview(activityIndicator)
         
-        let viewsDictionary = ["inpVw": inputWindow] as [String : Any]
+        let viewsDictionary = ["inpVw": inputWindow, "act": activityIndicator] as [String : Any]
         
+        
+        //layout the elements
         view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "H:|-[inpVw]-|", options: NSLayoutFormatOptions(), metrics: nil, views: viewsDictionary))
         view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|-20-[inpVw(300)]", options: NSLayoutFormatOptions(), metrics: nil, views: viewsDictionary))
+        view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "H:|[act]|", options: NSLayoutFormatOptions(), metrics: nil, views: viewsDictionary))
+        view.addConstraints(NSLayoutConstraint.constraints(withVisualFormat: "V:|[act(320)]", options: NSLayoutFormatOptions(), metrics: nil, views: viewsDictionary))
         
         // asign target to button
         inputWindow.bulbBtn.addTarget(self, action: #selector(pressBulbButton), for: .touchUpInside)
@@ -92,23 +120,40 @@ class ViewController: UIViewController, UITextFieldDelegate {
     
     // on press button
     func pressBulbButton() {
+        
+        // start activity indicator
+        activityIndicator.startAnimating()
+        
         //dismiss numberpad
         self.view.endEditing(true)
         
-        // call averaging function
-        calculateAverageNumberOfColours()
-        return
+        
+        // perform long computation asynchronously
+        DispatchQueue.global(qos: .utility).async {
+            // call averaging function
+            let colors = self.calculateAverageNumberOfColours()
+            
+            // update UI
+            DispatchQueue.main.async {
+                // now update UI on main thread// set labels to corresponding values to communicate to user
+                self.setLabelToColorCount(count: colors.0, reps: colors.1)
+                //stop activity indicator
+                self.activityIndicator.stopAnimating()
+            }
+        }
+        
     }
     
     // this function takes the users input as number of iterations of sampling
     // and calculates the expected number of unique colours
-    func calculateAverageNumberOfColours() {
+    func calculateAverageNumberOfColours() -> (Float, Int){
         
         //variables to keep track of quantities
         var total = Float(0)
         var reps = 1
         var maxReps = 0
-        var oldAverage = Float(0)
+        var totalDistance = 0.0
+        var averageDistanceToEv = Float(0)
         var newAverage = Float(0)
         
         // if user input is defined set the number of loops to user input
@@ -118,7 +163,7 @@ class ViewController: UIViewController, UITextFieldDelegate {
         }
         // if user presses button without input, return nothing
         else {
-            return
+            return (Float(0), 0)
         }
         
         // Start doing a number of sample routines defined by users input
@@ -133,8 +178,17 @@ class ViewController: UIViewController, UITextFieldDelegate {
             total += Float(newSample)
             newAverage = Float(total) / Float(i)
             
+            // break out of loop if average of variance has approached the true expected value close enough
+            let distanceToEV = abs(expectedValue! - Double(newAverage))
+            totalDistance += distanceToEV
+            averageDistanceToEv = Float(totalDistance) / Float(i)
+            
+            print(averageDistanceToEv)
+            if averageDistanceToEv < 0.014 {
+                print("%d under threshold", i)
+                break
+            }
             // reassign variables
-            oldAverage = newAverage
             maxReps = i
             
 //            print(newAverage)
@@ -143,9 +197,7 @@ class ViewController: UIViewController, UITextFieldDelegate {
         // set expected number of colors to calculated average
         let colorCount = newAverage
         
-        // set labels to corresponding values to communicate to user
-        setLabelToColorCount(count: colorCount, reps: maxReps)
-        return
+        return (colorCount, maxReps)
     }
     
     // change label text to found number of colors
@@ -388,7 +440,7 @@ class InputView: UIView {
             colorLabel.sizeToFit()
             colorLabel.numberOfLines = 0
 
-            simulationTitle.text = "Simulations"
+            simulationTitle.text = "Converged at"
             simulationTitle.textAlignment = .left
             simulationTitle.translatesAutoresizingMaskIntoConstraints = false
             simulationTitle.sizeToFit()

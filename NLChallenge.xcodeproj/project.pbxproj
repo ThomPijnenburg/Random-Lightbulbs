@@ -504,6 +504,7 @@
 				B14A61C11E42840E00F7AC87 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		B14A61C21E42840E00F7AC87 /* Build configuration list for PBXNativeTarget "NLChallengeTests" */ = {
 			isa = XCConfigurationList;
@@ -512,6 +513,7 @@
 				B14A61C41E42840E00F7AC87 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		B14A61C51E42840E00F7AC87 /* Build configuration list for PBXNativeTarget "NLChallengeUITests" */ = {
 			isa = XCConfigurationList;
@@ -520,6 +522,7 @@
 				B14A61C71E42840E00F7AC87 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
